@@ -50,6 +50,7 @@ type uploadRequest struct {
 // https://matrix.org/docs/spec/client_server/r0.2.0.html#post-matrix-media-r0-upload
 type uploadResponse struct {
 	ContentURI string `json:"content_uri"`
+	Blurhash   string `json:"blurhash"`
 }
 
 // Upload implements POST /upload
@@ -71,6 +72,7 @@ func Upload(req *http.Request, cfg *config.MediaAPI, dev *userapi.Device, db sto
 		Code: http.StatusOK,
 		JSON: uploadResponse{
 			ContentURI: fmt.Sprintf("mxc://%s/%s", cfg.Matrix.ServerName, r.MediaMetadata.MediaID),
+			Blurhash:   string(r.MediaMetadata.BlurHash),
 		},
 	}
 }
@@ -169,6 +171,19 @@ func (r *uploadRequest) doUpload(
 		}
 	}
 
+	blurhash := ""
+	if strings.HasPrefix(string(r.MediaMetadata.ContentType), "image") {
+		blurhash, err = fileutils.GetBlurhash(
+			ctx,
+			tmpDir,
+			r.Logger,
+		)
+
+		if err != nil {
+			r.Logger.WithError(err).Error("Error generating blurhash.")
+		}
+	}
+
 	// Check if temp file size exceeds max file size configuration
 	if cfg.MaxFileSizeBytes > 0 && bytesWritten > types.FileSizeBytes(cfg.MaxFileSizeBytes) {
 		fileutils.RemoveDir(tmpDir, r.Logger) // delete temp file
@@ -212,12 +227,14 @@ func (r *uploadRequest) doUpload(
 			UploadName:        r.MediaMetadata.UploadName,
 			Base64Hash:        hash,
 			UserID:            r.MediaMetadata.UserID,
+			BlurHash:          types.BlurHash(blurhash),
 		}
 	} else {
 		// The file doesn't exist. Update the request metadata.
 		r.MediaMetadata.FileSizeBytes = bytesWritten
 		r.MediaMetadata.Base64Hash = hash
 		r.MediaMetadata.MediaID, err = r.generateMediaID(ctx, db)
+		r.MediaMetadata.BlurHash = types.BlurHash(blurhash)
 		if err != nil {
 			fileutils.RemoveDir(tmpDir, r.Logger)
 			r.Logger.WithError(err).Error("Failed to generate media ID for new upload")
@@ -234,6 +251,7 @@ func (r *uploadRequest) doUpload(
 		"UploadName":    r.MediaMetadata.UploadName,
 		"FileSizeBytes": r.MediaMetadata.FileSizeBytes,
 		"ContentType":   r.MediaMetadata.ContentType,
+		"Blurhash":      r.MediaMetadata.BlurHash,
 	}).Info("File uploaded")
 
 	return r.storeFileAndMetadata(

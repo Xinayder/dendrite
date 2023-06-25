@@ -20,11 +20,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"image"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/bbrks/go-blurhash"
 	"github.com/matrix-org/dendrite/mediaapi/types"
 	"github.com/matrix-org/dendrite/setup/config"
 	"github.com/matrix-org/util"
@@ -143,6 +145,35 @@ func WriteTempFile(
 	hash = types.Base64Hash(base64.RawURLEncoding.EncodeToString(hasher.Sum(nil)[:]))
 	size = types.FileSizeBytes(bytesWritten)
 	path = tmpDir
+	return
+}
+
+func GetBlurhash(
+	ctx context.Context,
+	src types.Path,
+	logger *log.Entry,
+) (hash string, err error) {
+	reader, err := os.Open(string(types.Path(filepath.Join(string(src), "content"))))
+	if err != nil {
+		logger.WithError(err).WithField("src", src).Error("Failed to read src file")
+		return "", err
+	}
+	defer reader.Close()
+
+	img, _, err := image.Decode(reader)
+	if err != nil {
+		logger.WithError(err).WithField("src", src).Error("Failed to load image file")
+		return "", err
+	}
+
+	hash, err = blurhash.Encode(4, 4, img)
+	if err != nil {
+		logger.WithError(err).WithField("src", src).Error("Failed to create blurhash")
+		return "", err
+	}
+
+	logger.WithField("Blurhash", hash).Info("Generated blurhash")
+
 	return
 }
 

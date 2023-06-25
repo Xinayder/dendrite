@@ -85,4 +85,5 @@ type ImageInfo struct {
 	Height   int64  `json:"h"`
 	Width    int64  `json:"w"`
 	Size     int64  `json:"size"`
+	Blurhash string `json:"blurhash"`
 }

@@ -47,22 +47,24 @@ CREATE TABLE IF NOT EXISTS mediaapi_media_repository (
     -- Alternate RFC 4648 unpadded base64 encoding string representation of a SHA-256 hash sum of the file data.
     base64hash TEXT NOT NULL,
     -- The user who uploaded the file. Should be a Matrix user ID.
-    user_id TEXT NOT NULL
+    user_id TEXT NOT NULL,
+    -- The blurhash representation of an image or video file.
+    blurhash TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS mediaapi_media_repository_index ON mediaapi_media_repository (media_id, media_origin);
 `
 
 const insertMediaSQL = `
-INSERT INTO mediaapi_media_repository (media_id, media_origin, content_type, file_size_bytes, creation_ts, upload_name, base64hash, user_id)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO mediaapi_media_repository (media_id, media_origin, content_type, file_size_bytes, creation_ts, upload_name, base64hash, user_id, blurhash)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 const selectMediaSQL = `
-SELECT content_type, file_size_bytes, creation_ts, upload_name, base64hash, user_id FROM mediaapi_media_repository WHERE media_id = $1 AND media_origin = $2
+SELECT content_type, file_size_bytes, creation_ts, upload_name, base64hash, user_id, blurhash FROM mediaapi_media_repository WHERE media_id = $1 AND media_origin = $2
 `
 
 const selectMediaByHashSQL = `
-SELECT content_type, file_size_bytes, creation_ts, upload_name, media_id, user_id FROM mediaapi_media_repository WHERE base64hash = $1 AND media_origin = $2
+SELECT content_type, file_size_bytes, creation_ts, upload_name, media_id, user_id, blurhash FROM mediaapi_media_repository WHERE base64hash = $1 AND media_origin = $2
 `
 
 type mediaStatements struct {
@@ -102,6 +104,7 @@ func (s *mediaStatements) InsertMedia(
 		mediaMetadata.UploadName,
 		mediaMetadata.Base64Hash,
 		mediaMetadata.UserID,
+		mediaMetadata.BlurHash,
 	)
 	return err
 }
@@ -122,6 +125,7 @@ func (s *mediaStatements) SelectMedia(
 		&mediaMetadata.UploadName,
 		&mediaMetadata.Base64Hash,
 		&mediaMetadata.UserID,
+		&mediaMetadata.BlurHash,
 	)
 	return &mediaMetadata, err
 }
@@ -142,6 +146,7 @@ func (s *mediaStatements) SelectMediaByHash(
 		&mediaMetadata.UploadName,
 		&mediaMetadata.MediaID,
 		&mediaMetadata.UserID,
+		&mediaMetadata.BlurHash,
 	)
 	return &mediaMetadata, err
 }

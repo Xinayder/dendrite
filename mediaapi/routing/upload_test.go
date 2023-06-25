@@ -148,6 +148,8 @@ func Test_uploadRequest_doUpload(t *testing.T) {
 			}
 			if got := r.doUpload(tt.args.ctx, tt.args.reqReader, tt.args.cfg, tt.args.db, tt.args.activeThumbnailGeneration); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("doUpload() = %+v, want %+v", got, tt.want)
+			} else {
+				t.Log(got)
 			}
 		})
 	}

@@ -45,6 +45,8 @@ type RequestMethod string
 // MatrixUserID is a Matrix user ID string in the form @user:domain e.g. @alice:matrix.org
 type MatrixUserID string
 
+type BlurHash string
+
 // MediaMetadata is metadata associated with a media file
 type MediaMetadata struct {
 	MediaID           MediaID
@@ -55,6 +57,7 @@ type MediaMetadata struct {
 	UploadName        Filename
 	Base64Hash        Base64Hash
 	UserID            MatrixUserID
+	BlurHash          BlurHash
 }
 
 // RemoteRequestResult is used for broadcasting the result of a request for a remote file to routines waiting on the condition
